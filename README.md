@@ -17,3 +17,13 @@ python -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'
 pytest
 python examples/run_demo.py
 ```
+
+## Run with an LLM
+
+Install the SDK that provides your async chat client, then configure it in `.env` (gitignored):
+
+```bash
+pip install -e '.[llm]'
+cp .env.example .env   # set LLM_CLIENT (module:Class), LLM_API_KEY, LLM_MODEL
+python examples/run_llm_demo.py "The checkout page is down"
+```
