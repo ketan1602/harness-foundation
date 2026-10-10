@@ -27,3 +27,18 @@ def test_experiment_3_token_ceiling_terminates():
                             estimated_tokens=6000)
     assert (result.status, result.reason) == ("terminated", "maximum tokens exceeded")
     assert telemetry.events[-1].name == "agent.run.terminated"
+
+
+def test_exp1_direct_path_has_no_policy_or_budget():
+    from exp1_direct_vs_harnessed import compare
+    _, unauthorized, oversized = compare()
+    assert unauthorized[1].startswith("ran:")
+    assert unauthorized[2].startswith("blocked")
+    assert oversized[1].startswith("ran:")
+    assert oversized[2].startswith("terminated")
+
+
+def test_registry_demo_lists_agents_by_owner():
+    from registry_demo import build_registry
+    ids = [m.agent_id for m in build_registry().by_owner("customer-platform")]
+    assert ids == ["support-agent", "triage-agent"]
