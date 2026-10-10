@@ -15,7 +15,7 @@ SYSTEM = "Classify the support request as one of: outage, billing, how-to. Reply
 
 def classify(llm, text: str) -> ToolResult:
     completion = llm.complete(SYSTEM, text)
-    return ToolResult(completion.text, completion.tokens)
+    return ToolResult(completion.text, completion.tokens, completion.cost_usd)
 
 
 def build_llm_harness(llm) -> tuple[AgentHarness, InMemoryTelemetry]:

@@ -3,6 +3,7 @@
 LLM_CLIENT   dotted path "module:Class" of an async client exposing chat.completions.create
 LLM_API_KEY  credential passed to the client
 LLM_MODEL    model name
+LLM_COST_PER_1K_TOKENS  optional price; unset = cost stays the harness estimate
 LLM_USE_TRUSTSTORE  optional "1" to use the OS trust store for TLS
 """
 import asyncio
@@ -15,12 +16,14 @@ from importlib import import_module
 class Completion:
     text: str
     tokens: int
+    cost_usd: float | None = None
 
 
 class LLM:
-    def __init__(self, client, model: str) -> None:
+    def __init__(self, client, model: str, cost_per_1k_tokens: float | None = None) -> None:
         self._client = client
         self._model = model
+        self._rate = cost_per_1k_tokens
 
     async def acomplete(self, system: str, user: str) -> Completion:
         resp = await self._client.chat.completions.create(
@@ -28,7 +31,9 @@ class LLM:
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
         )
-        return Completion(resp.choices[0].message.content, resp.usage.total_tokens)
+        tokens = resp.usage.total_tokens
+        cost = tokens / 1000 * self._rate if self._rate is not None else None
+        return Completion(resp.choices[0].message.content, tokens, cost)
 
     def complete(self, system: str, user: str) -> Completion:
         """Sync entry point so the (sync) harness can mediate LLM calls as tools."""
@@ -50,4 +55,5 @@ def make_llm() -> LLM:
         truststore.inject_into_ssl()
     module_name, _, class_name = client_path.partition(":")
     client_cls = getattr(import_module(module_name), class_name)
-    return LLM(client_cls(api_key=api_key), model)
+    rate = os.environ.get("LLM_COST_PER_1K_TOKENS")
+    return LLM(client_cls(api_key=api_key), model, float(rate) if rate else None)

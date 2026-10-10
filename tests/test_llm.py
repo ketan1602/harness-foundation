@@ -15,8 +15,8 @@ def fake_client(answer="outage", tokens=123):
     return client
 
 
-def setup_llm(client):
-    return build_llm_harness(LLM(client, "m"))
+def setup_llm(client, rate=None):
+    return build_llm_harness(LLM(client, "m", rate))
 
 
 def test_llm_call_runs_through_harness():
@@ -52,3 +52,16 @@ def test_client_loaded_from_env(monkeypatch):
     monkeypatch.setenv("LLM_API_KEY", "k")
     monkeypatch.setenv("LLM_MODEL", "m")
     assert make_llm()._model == "m"
+
+
+def test_cost_is_measured_from_rate():
+    harness, _ = setup_llm(fake_client(tokens=1000), rate=0.002)
+    result = harness.run(RunRequest("triage-agent", "t", "classify_ticket", {"text": "x"}))
+    assert result.usage.cost_usd == pytest.approx(0.002)
+
+
+def test_cost_keeps_estimate_without_rate():
+    harness, _ = setup_llm(fake_client(tokens=1000))
+    result = harness.run(RunRequest("triage-agent", "t", "classify_ticket", {"text": "x"},
+                                    estimated_cost_usd=0.01))
+    assert result.usage.cost_usd == pytest.approx(0.01)
