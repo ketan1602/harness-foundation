@@ -1,0 +1,10 @@
+agent_id: support-agent
+owner: customer-platform
+purpose: Classify and create customer support tickets
+risk_tier: low
+allowed_tools:
+  - create_ticket
+budget:
+  max_steps: 3
+  max_tokens: 5000
+  max_cost_usd: 0.10
