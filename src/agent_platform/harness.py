@@ -5,7 +5,7 @@ from .budget import BudgetController, BudgetExceeded, Usage
 from .policy import PolicyEngine
 from .registry import AgentRegistry
 from .telemetry import InMemoryTelemetry
-from .tools import ToolRegistry
+from .tools import ToolRegistry, ToolResult
 
 
 @dataclass(frozen=True)
@@ -51,6 +51,10 @@ class AgentHarness:
         try:
             budget.consume(request.estimated_tokens, request.estimated_cost_usd)
             output = self.tools.call(request.tool_name, **request.tool_args)
+            if isinstance(output, ToolResult):
+                budget.reconcile(request.estimated_tokens, request.estimated_cost_usd,
+                                 output.tokens, output.cost_usd)
+                output = output.output
         except BudgetExceeded as exc:
             emit("agent.run.terminated", reason=str(exc))
             return RunResult("terminated", None, str(exc), budget.usage)
@@ -58,7 +62,8 @@ class AgentHarness:
             emit("agent.run.failed", error_type=type(exc).__name__, error=str(exc))
             return RunResult("failed", None, str(exc), budget.usage)
 
-        emit("agent.run.completed", tool=request.tool_name, cost_usd=budget.usage.cost_usd)
+        emit("agent.run.completed", tool=request.tool_name,
+             tokens=budget.usage.tokens, cost_usd=budget.usage.cost_usd)
         return RunResult("completed", output, None, budget.usage)
 
     def _emitter(self, request: RunRequest):

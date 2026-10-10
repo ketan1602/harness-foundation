@@ -7,7 +7,14 @@ LLM_USE_TRUSTSTORE  optional "1" to use the OS trust store for TLS
 """
 import asyncio
 import os
+from dataclasses import dataclass
 from importlib import import_module
+
+
+@dataclass(frozen=True)
+class Completion:
+    text: str
+    tokens: int
 
 
 class LLM:
@@ -15,17 +22,17 @@ class LLM:
         self._client = client
         self._model = model
 
-    async def achat(self, system: str, user: str) -> str:
+    async def acomplete(self, system: str, user: str) -> Completion:
         resp = await self._client.chat.completions.create(
             model=self._model,
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
         )
-        return resp.choices[0].message.content
+        return Completion(resp.choices[0].message.content, resp.usage.total_tokens)
 
-    def chat(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str) -> Completion:
         """Sync entry point so the (sync) harness can mediate LLM calls as tools."""
-        return asyncio.run(self.achat(system, user))
+        return asyncio.run(self.acomplete(system, user))
 
 
 def _required(name: str) -> str:

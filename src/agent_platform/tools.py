@@ -1,4 +1,13 @@
 from collections.abc import Callable
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class ToolResult:
+    """Optional tool return type carrying measured usage (cost None = keep the estimate)."""
+    output: object
+    tokens: int
+    cost_usd: float | None = None
 
 
 class ToolRegistry:

@@ -21,6 +21,17 @@ class BudgetController:
         self.usage.steps += 1
         self.usage.tokens += tokens
         self.usage.cost_usd += cost_usd
+        self._check()
+
+    def reconcile(self, estimated_tokens: int, estimated_cost_usd: float,
+                  actual_tokens: int, actual_cost_usd: float | None) -> None:
+        """Replace the pre-flight estimate with measured usage, then re-check ceilings."""
+        self.usage.tokens += actual_tokens - estimated_tokens
+        if actual_cost_usd is not None:
+            self.usage.cost_usd += actual_cost_usd - estimated_cost_usd
+        self._check()
+
+    def _check(self) -> None:
         if self.usage.steps > self.spec.max_steps:
             raise BudgetExceeded("maximum steps exceeded")
         if self.usage.tokens > self.spec.max_tokens:
